@@ -1,0 +1,3 @@
+- insert:
+    - id: mermaid-chat
+      name: '@local/mermaid-chat'
