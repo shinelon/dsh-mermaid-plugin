@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Mermaid Diagrams",
+    "description": "Render ```mermaid code blocks in chat messages as diagrams, with light/dark theme support and a diagram/source toggle."
+  }
+}

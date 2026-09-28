@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Mermaid 图形渲染",
+    "description": "在聊天消息中把 ```mermaid 代码块直接渲染为图形，支持深浅色主题与图形/源码切换。"
+  }
+}
