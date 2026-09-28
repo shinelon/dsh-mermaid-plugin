@@ -4,6 +4,18 @@
   "private": true,
   "type": "module",
   "description": "Render ```mermaid code blocks in the chat transcript as diagrams.",
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "dsh-plugin",
+    "mermaid",
+    "diagram"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/shinelon/dsh-mermaid-plugin.git"
+  },
   "icon": "./icon.svg",
   "exports": {
     ".": "./index.js",
