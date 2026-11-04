@@ -19,13 +19,13 @@
 | --- | --- | --- |
 | `package.json` | 手写 | 插件清单：exports 映射、`dsh.bundle.patch`、`dsh.client` 加载配置 |
 | `index.js` | 手写 | 宿主半边入口，仅一个空 `apply()`（渲染逻辑全在 client 侧），保持原样 |
-| `client.js` | **打包产物**（约 3.4 MB） | mermaid 11.17.2 全量 bundle（含 dayjs / dompurify / katex）+ 文件末尾的插件自身逻辑（`__ModuleLoader__.load` 注册段） |
+| `client.js` | 预构建 + 手写插件逻辑（约 3.4 MB） | mermaid 11.17.2 全量 bundle（含 dayjs / dompurify / katex）+ 文件末尾的插件自身逻辑（`__ModuleLoader__.load` 注册段）；当前仓库即维护入口 |
 | `cordis.patch.yml` | 手写 | bundle 补丁：向宿主模块树插入 `id: mermaid-chat` / `name: '@local/mermaid-chat'` |
 | `locale/zh.json`、`locale/en.json` | 手写 | 插件元信息（标题/描述），用于插件列表展示 |
 | `icon.svg` | 手写 | 插件图标 |
 
-> 仓库同级目录存在 `dsh-mermaid-plugin.zip`，推测为打包分发的产物（安装渠道待确认）。
-> git 仓库目前尚无任何提交（master 无 commit），全部文件处于未跟踪状态。
+> 仓库同级目录存在 `dsh-mermaid-plugin.zip`，为打包分发产物。
+> git 仓库已提交到 master，origin 为 `github.com/shinelon/dsh-mermaid-plugin`。
 
 ## 架构与加载机制
 
@@ -68,11 +68,12 @@ flowchart LR
 
 ### 渲染与状态
 
-- **扫描**：`MutationObserver` 监听 `document.body`（childList/subtree/characterData），350ms 防抖后增量扫描。
+- **扫描**：`MutationObserver` 监听 `document.body`（childList/subtree/characterData + `data-streaming` 属性），350ms 定时后增量扫描；代码块若处于 `[data-streaming]` 祖先内（assistant 消息仍在流式），跳过创建表面与渲染，消息结束后一次性出图。
 - **增量复用**：`WeakMap`（surface → 状态对象）+ `lastCode` 去重，代码未变化不重渲染；宿主代码块被移除时同步清理对应表面。
-- **懒加载**：mermaid 模块 Promise 缓存，首次渲染时才初始化（`startOnLoad: false`、`securityLevel: "strict"`、`theme` 按当前主题、透明背景、`useMaxWidth`）。
+- **懒加载**：mermaid 模块 Promise 缓存，首次渲染时才初始化（`startOnLoad: false`、`securityLevel: "strict"`、`htmlLabels: false`、`secure` 锁定 `htmlLabels` / `themeCSS` / `fontFamily`、`theme` 按当前主题、透明背景、`useMaxWidth`）。
 - **失败回退**：渲染异常时 `data-render="error"`，显示「渲染失败 + 错误详情」，源码块保持可见。
 - **切换逻辑**：仅 `data-mode="diagram"` 且 `data-render="ok"` 时用 CSS `:has()` 隐藏宿主源码块；从错误状态切回「图形」会强制重渲染一次。
+- **交互收紧**：表面元素在捕获阶段拦截 `click` / `submit`：图内 http(s) 链接走 `window.open(..., "noopener,noreferrer")`，不替换当前标签页；表单提交一律阻止。
 
 ### 主题与 i18n
 
@@ -85,9 +86,7 @@ flowchart LR
 
 ## 开发约定
 
-- **client.js 是打包产物，禁止手工格式化或整体重构**。本仓库不含其源码与构建脚本（源码工程位置待确认）。改插件逻辑的两种途径：
-  1. 回到源工程修改后重新打包替换本文件（推荐）；
-  2. 在文件末尾插件注册段做最小修改，保持现有 IIFE/压缩风格。
+- **client.js 以预构建 bundle 入库，插件逻辑在文件末尾注册段；当前仓库即插件维护入口**。修改时只动注册段，保持现有 IIFE/压缩风格，不要格式化或整体重构 bundle；若后续恢复源工程/构建脚本，优先回源构建后替换本文件。
 - `index.js` 的空 `apply()` 是宿主半边协议，保持原样。
 - `package.json` 的 `exports` 与 `files` 必须和实际文件严格同步，新增/重命名文件时两处一起改。
 - 界面文案改 `client.js` 内置字典（`cw`），插件列表标题/描述改 `locale/*.json`，两处职责不同不要混用。
@@ -106,5 +105,6 @@ flowchart LR
   2. 「图形 / 源码」来回切换 → 确认宿主源码块显隐正确；
   3. 切换 DSH 深浅主题 → 确认图形重渲染且配色跟随；
   4. 故意写非法 mermaid 语法 → 确认回退源码并显示错误信息；
-  5. 关闭/重开会话 → 确认无残留表面元素。
+  5. 流式输出 mermaid 代码块 → 确认消息流式期间只显示源码、不出现解析错误，消息结束后一次性出图；
+  6. 关闭/重开会话 → 确认无残留表面元素。
 - 无 lint / test 脚本；声称「验证通过」前必须实际执行上述检查并确认输出。

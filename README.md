@@ -11,8 +11,8 @@ A DeepSeek Harness (DSH) client plugin that renders ` ```mermaid ` code blocks i
 - **Diagram / source toggle** — the original code block stays reachable; the host source is hidden by CSS `:has()` only while a rendered diagram stands in.
 - **Theme following** — re-initializes mermaid (`dark` / `default`) and re-renders when the DSH dark-theme attribute changes.
 - **Error fallback** — a broken diagram keeps the source visible and shows the mermaid error message instead of swallowing content.
-- **Strict sanitization** — mermaid runs with `securityLevel: "strict"` on a transparent background.
-- **Incremental rendering** — a debounced MutationObserver scans for changes; unchanged code is never re-rendered; stale surfaces are cleaned up when their code block disappears.
+- **Strict sanitization** — mermaid runs with `securityLevel: "strict"` and `htmlLabels: false`; diagram links open through `window.open(..., "noopener,noreferrer")` and form submission is blocked.
+- **Streaming-safe rendering** — while the host assistant message is still streaming (`[data-streaming]` ancestor), the source block is left untouched; the diagram is rendered once the message settles.
 
 ## Install
 
@@ -51,7 +51,7 @@ package.json (dsh.bundle.patch) ──► cordis.patch.yml ──► module "mer
 
 ## Development
 
-- Do not reformat `client.js` by hand — it is a build artifact; its source project is not part of this repository.
+- Do not reformat `client.js` — it is a prebuilt mermaid bundle plus the plugin registration block at the end (the maintained source for this repository). Edit only that block and keep the minified style.
 - Static check (no test/lint scripts exist): `node --check index.js && node --check client.js`
 - See [AGENTS.md](AGENTS.md) for architecture notes, conventions and the manual verification checklist.
 
